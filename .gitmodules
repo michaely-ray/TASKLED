@@ -1,0 +1,7 @@
+[submodule "components/wifiConfigF"]
+	path = components/wifiConfigF
+	url = https://github.com/InsoleON/wifiConfigF.git
+[submodule "components/utils"]
+	path = components/utils
+	url = https://github.com/InsoleON/utils.git
+

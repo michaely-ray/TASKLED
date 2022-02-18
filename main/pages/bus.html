@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" charset="UTF-8">
+        <style>
+        div{
+            display: flex;
+            justify-content: center;
+            margin-top: 50px;
+            width: 100%;
+        }
+
+        form{
+            background: #FFF;
+            padding: 6px;
+            border: 1px solid #DDD;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            width: 90%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        form .row{
+            margin: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        select:required{
+            position: relative;
+            height: 46px;
+            margin-bottom: 15px;
+            padding: 0 0px;
+            color: #777;
+            font-size: 15px;
+            width: 48%;
+            border: 1px solid #ddd;
+        }
+
+        select:required:invalid{
+            color: #999;
+        }
+
+        form input{
+            height: 46px;
+            margin-bottom: 15px;
+            padding: 0 0px;
+            color: #777;
+            font-size: 15px;
+            width: 48%;
+            border: 1px solid #ddd;
+        }
+
+        form input.sn{
+            height: 46px;
+            margin-bottom: 15px;
+            padding: 0 0px;
+            color: #777;
+            font-size: 15px;
+            width: 100%;
+            border: 1px solid #ddd;
+        }
+
+        form input::placeholder{
+            color: #999;
+        }
+
+        form h2{
+            color: #555;
+            border-bottom: 2px solid #F04E23;
+            margin-bottom: 20px;
+        }
+
+        form button{
+            color: #fff;
+            font-size: 20px;
+            background: #F04E23;
+            height: 46px;
+            border: 0;
+            border-radius: 5px;
+            width: 40%;
+            cursor: pointer;
+        }
+
+        form button:hover{
+            opacity: 0.8;
+        }
+
+        article{
+            padding: 6px;
+            border: 1px solid #DDD;
+            border-radius: 10px;
+            background: #FFF;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            width: 90%;
+            max-width: 400px;
+            display: grid;
+            align-items: center;
+            grid-template-columns: 1fr 0.1fr;
+            grid-template-rows: 1fr 1fr;
+        }
+
+        article p{
+            font-size: 16px;
+            color: #999;
+            margin: 0 0 0;
+            line-height: 24px;
+        }
+
+        .deviceList article button{
+            grid-column-start: 2;
+            grid-row-start: 1;
+            grid-row-end: 3;
+            background: #FFF;
+            color: #000;
+            border: 0;
+        }
+
+        .deviceList{
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .deviceList button{
+            color: #fff;
+            font-size: 20px;
+            background: #F04E23;
+            height: 46px;
+            border: 0;
+            border-radius: 5px;
+            width: 36%;
+            max-width: 160px;
+            cursor: pointer;
+        }
+
+        .deviceList button:hover{
+            opacity: 0.8;
+        }
+        .deviceList button:disabled{
+            opacity: 0.5;
+            cursor: auto;
+        }
+
+        hr{
+            margin: 20px 0;
+            border: none;
+            border-bottom: 1px solid #cdcdcd;
+            width: 100%;
+        }
+
+        a{
+            font-size: 16;
+            font-weight: bold;
+            color: #999;
+            text-decoration: none;
+            margin-bottom: 5px;
+        }
+        </style>
+    </head>
+
+    <body>
+        <div class="addDeviceForm">
+            <form class="form1" id="deviceForm" action="">
+                <div class="row">
+                    <select id="mfr" name="mfr" required>
+                        <option value=0 disabled selected hidden>Fabricante</option>
+                        <option value="Canadian">Canadian Solar</option>
+                        <option value="Ecosolys">Ecosolys</option>
+                        <option value="Fronius">Fronius</option>
+                        <option value="Huawei">Huawei/Weg</option>
+                        <option value="Refusol">Refusol</option>
+                        <option value="Sungrow">Sungrow</option>
+
+                    </select>
+                    <select id="mdl" name="mdl" required>
+                        <option value=0 disabled selected hidden>Modelo</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <select id="baud" name="baud" required>
+                        <option value=0 disabled selected hidden>Baud Rate</option>
+                        <option value=9600>9600</option>
+                        <option value=19200>19200</option>
+                    </select>
+                    <input id="address" name="address" placeholder="Endereço" type="number" required>
+                </div>
+                <div class="row">
+                    <input id="sn" class="sn" name="sn" placeholder="Número Serial" type="text" required>
+                </div>
+
+                <button>Adicionar</button>
+                <hr />
+                <a id="wifiLink" href="/wifi">Configurar WiFi sem configurar Inversores</a>
+            </form>
+        </div>
+
+        <div class="deviceList" id="deviceList">
+            <button onclick="sendBusData()" id="endButton" disabled>Configurar WiFi</button>
+        </div>
+
+        <script>
+            let busData = [];
+
+            document.getElementById("deviceForm").addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const data = Array.from(formData.entries()).reduce((memo, pair) => ({ ...memo, [pair[0]]: pair[1], }), {});
+                const list = document.getElementById("deviceList");
+                const item = document.createElement('article');
+                const head = document.createElement('strong');
+                const desc = document.createElement('p');
+                const butt = document.createElement('button');
+                head.innerHTML = `${data.address} - ${data.mfr} - ${data.sn}`;
+                desc.innerHTML = `${data.mdl} - ${data.baud}`;
+                butt.innerHTML = 'X';
+                butt.setAttribute('onclick', `deleteItem(${data.address})`);
+                item.appendChild(head);
+                item.appendChild(desc);
+                item.appendChild(butt);
+                item.setAttribute('id', data.address);
+                list.insertBefore(item, list.firstElementChild);
+                busData[data.address] = data;
+                document.getElementById('endButton').removeAttribute('disabled');
+                clearForm();
+            });
+
+            function deleteItem(id){
+                const item = document.getElementById(id);
+                item.remove();
+                busData[id] = null;
+                if(busData.every(el => el === null))
+                    document.getElementById('endButton').setAttribute('disabled', 1);
+            }
+
+            function clearForm(){
+                document.getElementById("mfr").value = 0;
+                document.getElementById("mdl").value = 0;
+                document.getElementById("baud").value = 0;
+                document.getElementById("address").value = '';
+                document.getElementById("sn").value = '';
+            }
+
+            async function sendBusData(){
+                let filtered = busData.filter(el=>el!=null);
+                console.log(JSON.stringify(filtered));
+                await fetch('/setup', {method: 'post', body: JSON.stringify(filtered)}).then(()=> {
+                    alert(`Sucesso ${String.fromCodePoint(0x1F600)}`);
+                    document.getElementById('wifiLink').click();
+                });
+            }
+
+            document.getElementById("mfr").addEventListener('change', (e) => {
+                e.preventDefault();
+                const canadian = ['CSI-3KTL1P-GI-FL', 'CSI-4KTL1P-GI-FL', 'CSI-5KTL1P-GI-FL', 'CSI-7KTL1P-GI-FL', 'CSI-9KTL1P-GI-FL'];
+                const ecosolys = ['Ecos 1000'];
+                const fronius = ['Primo 3.0-1'];
+                const huawei = ['SUN2000L-3KTL', 'SUN2000L-5KTL', 'SUN2000L-12KTL-M0'];
+                const refusol = ['1.6kW-1T','3.3kW-1T','3kW-1T','5kW-1T','7.5kW-1T', '20kW-3T', '25kW-3T', '33kW-3T', '40kW-3T', '50kW-3T'];
+                const sungrow = ['SG3K-D', 'SG4K-D', 'SG6K-D', 'SG8K3-D', 'SG12KTL-M', 'SG20KTL-M', 'SG33CX', 'SG36KTL-M', 'SG40CX', 'SG50CX', 'SG60KTL'];
+                let models = [];
+                let baud = 9600;
+                switch(e.target.value){
+                    case 'Canadian':
+                        models = canadian;
+                        break;
+
+                    case 'Ecosolys':
+                        models = ecosolys;
+                        baud = 19200;
+                        break;
+
+                    case 'Fronius':
+                        models = fronius;
+                        break;
+
+                    case 'Huawei':
+                        models = huawei;
+                        break;
+
+                    case 'Sungrow':
+                        models = sungrow;
+                        break;
+
+                    case 'Refusol':
+                        models = refusol;
+                        break;
+
+                    default:
+                        break;
+                }
+                const mdlSelect = document.getElementById('mdl');
+                const prevOptions = mdlSelect.getElementsByTagName('option');
+                if(prevOptions.length > 1){
+                    for(i = prevOptions.length; i>1; i--)
+                        mdlSelect.removeChild(prevOptions[i-1]);
+                }
+
+                models.forEach((item) => {
+                    const opt = document.createElement('option');
+                    opt.setAttribute('value', item);
+                    opt.innerHTML = item;
+                    mdlSelect.appendChild(opt);
+                });
+
+                const baudSelect = document.getElementById('baud');
+                const prev = baudSelect.getElementsByTagName('option');
+                if(prev.length > 1){
+                    for(i = prev.length; i>1; i--)
+                        baudSelect.removeChild(prev[i-1]);
+                }
+
+                const opt = document.createElement('option');
+                opt.setAttribute('value', baud);
+                opt.innerHTML = baud;
+                baudSelect.appendChild(opt);
+                baudSelect.value = baud;
+            });
+
+        </script>
+    </body>
+
+</html>

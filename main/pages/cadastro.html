@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" charset="UTF-8">
+    <style>
+        div{
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100hv;
+            margin-top: 50px;
+        }
+        form{
+            position: relative;
+            width: 500px;
+            background: #FFF;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 1px solid #DDD;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        select:required{
+            display: flex;
+            height: 46px;
+            margin-bottom: 15px;
+            padding: 0 0px;
+            color: #777;
+            font-size: 15px;
+            width: 100%;
+            border: 1px solid #ddd;
+        }
+
+        select:required:invalid{
+            color: #999;
+        }
+
+        form input{
+            display: flex;
+            height: 46px;
+            margin-bottom: 15px;
+            padding: 0 0px;
+            color: #777;
+            font-size: 15px;
+            width: 100%;
+            border: 1px solid #ddd;
+        }
+        form input::placeholder{
+            color: #999;
+        }
+
+        form h2{
+            color: #555;
+            border-bottom: 2px solid #F04E23;
+            margin-bottom:20px;
+        }
+
+        form button{
+            color: #fff;
+            font-size: 20px;
+            background: #F04E23;
+            height: 46px;
+            border: 0;
+            border-radius: 5px;
+            width: 50%;
+            cursor: pointer;
+            margin-bottom: 5px;
+        }
+
+        form button:hover{
+            opacity: 0.8;
+        }
+
+        form div{
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            border: 10px solid #f3f3f3;
+            border-top: 10px solid #F04E23;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: flex;
+            margin-top: 0;
+        }
+
+        @keyframes spin{
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        hr{
+            margin: 20px 0;
+            border: none;
+            border-bottom: 1px solid #cdcdcd;
+            width: 100%;
+        }
+
+        a{
+            font-size: 16;
+            font-weight: bold;
+            color: #999;
+            text-decoration: none;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <form class="form1" id="loginForm" action="">
+            <div class="loader" id="loaderIcon"></div>
+            <h2>Conectar Wifi</h2>
+            <select id="ssid" name="ssid" required>
+                <option value="" disabled selected hidden>Escolha a rede WiFi</option>
+            </select>
+
+            <input id="pwd" type="password" name="pwd" placeholder="Senha" maxlength="64" minlength="4">
+
+            <button id="submit">Conectar</button>
+            <hr />
+            <a id="busLink" href="/">Configurar Inversores</a>
+            <a id="leaveLink" href="/drop">Sair sem configurar WiFi</a>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => { 
+            e.preventDefault();
+            document.getElementById('loaderIcon').style.display = 'flex';
+            const formData = new FormData(e.target);
+            const data = Array.from(formData.entries()).reduce((memo, pair) => ({ ...memo, [pair[0]]: pair[1], }), {});
+            const connResult = await fetch('/connection',{method: 'post', body: JSON.stringify(data)}).then(res=>res.json());
+            if(connResult.result === 'success'){
+                alert(`Sucesso ${String.fromCodePoint(0x1F600)}`);
+                document.getElementById('busLink').click();
+            }
+            else{
+                alert(`Falha de Conexão ${String.fromCodePoint(0x1F625)} Tente novamente`);
+            }
+            document.getElementById('loaderIcon').style.display = 'none';
+        });
+
+        async function getScannedSSID(){
+            const options = await fetch('/scan').then(res=> res.json());
+            console.log(options);
+            const select = document.getElementById('ssid');
+            for(const option of options){
+                const opt = document.createElement('option');
+                opt.setAttribute('value', option.id);
+                const text = document.createTextNode(opt.label);
+                opt.innerHTML = option.label;
+                select.appendChild(opt);
+            }
+            document.getElementById('loaderIcon').style.display = 'none';
+        }
+
+        getScannedSSID();
+    </script>
+
+</body>
+
+</html>
