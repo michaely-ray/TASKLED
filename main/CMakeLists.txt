@@ -1,15 +1,5 @@
 idf_component_register(SRCS
-                            "main.cpp"
-                            "ModbusDriver.cpp"
-                            "Inverter.cpp"
-                            "FileManager.c"
-                            "internet.c"
-                            "ota.c"
-                            "mqtt.c"
+                            "main.c"
                             "pppos_client.c"
-                            # "utils.c"
-                    INCLUDE_DIRS "." "include" "include/inverters"
-                    EMBED_TXTFILES "./pages/cadastro.html"
-                    EMBED_TXTFILES "./pages/bus.html"
-                    EMBED_TXTFILES "./server_certs/cert.pem"
-                    EMBED_TXTFILES "./server_certs/ca.crt")
+                           
+                    INCLUDE_DIRS "include" )

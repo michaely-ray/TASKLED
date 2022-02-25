@@ -6,7 +6,6 @@
 #include "freertos/event_groups.h"
 #include "esp_netif.h"
 #include "esp_netif_ppp.h"
-#include "mqtt_client.h"
 #include "esp_modem.h"
 #include "esp_modem_netif.h"
 #include "esp_log.h"
@@ -14,10 +13,6 @@
 #include "bg96.h"
 #include "sim7600.h"
 #include "driver/gpio.h"
-
-#include "mqtt.h"
-#include "operators.h"
-#include "FileManager.h"
 
 #ifdef __cplusplus
 extern "C"
