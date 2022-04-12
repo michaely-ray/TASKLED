@@ -13,20 +13,16 @@
 #include "bg96.h"
 #include "sim7600.h"
 #include "driver/gpio.h"
-
+#include "mqtt.h"
 #ifdef __cplusplus
 extern "C"
 {
 #endif
   extern bool ppposConnectFlag;
-  void getSignalQuantity(uint32_t *rssi, uint32_t *ber);
   void sim800lConfig(void);
   void sim800lReset(void);
   void ppposStart(void);
   void ppposConnect(void);
-  void ppposStop(void);
-  void getGprsInfo(char *oper);
-  uint8_t gprsIsConnected(uint16_t timeout);
 
 #ifdef __cplusplus
 }

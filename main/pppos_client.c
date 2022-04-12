@@ -2,27 +2,22 @@
 #include "driver/gpio.h"
 #include "pppos_client.h"
 
-#define RED (gpio_num_t)14
-#define GREEN (gpio_num_t)12
-#define BLUE (gpio_num_t)27
 static const char *TAG = "GPRS";
-static EventGroupHandle_t event_group = NULL;
-static const int CONNECT_BIT = BIT0;
-static const int STOP_BIT = BIT1;
-bool onlyOncePPPOS = true;
 modem_dte_t *dte = NULL;
 modem_dce_t *dce = NULL;
 void *modem_netif_adapter = NULL;
 esp_netif_t *esp_netif = NULL;
-bool ppposConnectFlag = false;
-bool ppposProcessingFlag = false;
+#define RED (gpio_num_t)14
+#define GREEN (gpio_num_t)12
+#define BLUE (gpio_num_t)27
+
 void ppposReconnect(void);
 
 void firstFuncMicha(void)
 {
     ESP_LOGI(TAG, "\n\nENTROU NA FUNÇÃO DE MICHA\n\n");
 
-    for (int i = 0; i <= 20; i++)
+    for (int i = 0; i <= 30; i++)
     {
 
         gpio_set_level(RED, 0);
@@ -57,7 +52,7 @@ void sim800lReset(void)
     gpio_set_level(GPIO_NUM_21, 0);
     vTaskDelay(150 / portTICK_PERIOD_MS);
     gpio_set_level(GPIO_NUM_21, 1);
-    vTaskDelay(10000 / portTICK_PERIOD_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
 void ppposStart(void)
@@ -77,7 +72,6 @@ static void modem_event_handler(void *event_handler_arg, esp_event_base_t event_
         break;
     case ESP_MODEM_EVENT_PPP_STOP:
         ESP_LOGI(TAG, "Modem PPP Stopped");
-        xEventGroupSetBits(event_group, STOP_BIT);
         break;
     case ESP_MODEM_EVENT_UNKNOWN:
         ESP_LOGW(TAG, "Unknow line received: %s", (char *)event_data);
@@ -120,20 +114,13 @@ static void on_ip_event(void *arg, esp_event_base_t event_base,
         esp_netif_get_dns_info(netif, 1, &dns_info);
         ESP_LOGI(TAG, "Name Server2: " IPSTR, IP2STR(&dns_info.ip.u_addr.ip4));
         ESP_LOGI(TAG, "~~~~~~~~~~~~~~");
-        xEventGroupSetBits(event_group, CONNECT_BIT);
-        ppposConnectFlag = true;
-
-        ppposProcessingFlag = false;
         ESP_LOGI(TAG, "GOT ip event!!!");
+        mqttConfigGPRS();
+        mqttStart();
     }
     else if (event_id == IP_EVENT_PPP_LOST_IP)
     {
-        ppposProcessingFlag = false;
         ESP_LOGI(TAG, "Modem Disconnect from PPP Server");
-        xEventGroupClearBits(event_group, CONNECT_BIT);
-        ppposReconnect();
-        // ppposStart();
-        ppposConnectFlag = false;
     }
     else if (event_id == IP_EVENT_GOT_IP6)
     {
@@ -146,7 +133,7 @@ static void on_ip_event(void *arg, esp_event_base_t event_base,
 
 void ppposConnect(void)
 {
-    event_group = xEventGroupCreate();
+
 #if CONFIG_LWIP_PPP_PAP_SUPPORT
     esp_netif_auth_type_t auth_type = NETIF_PPP_AUTHTYPE_PAP;
 #elif CONFIG_LWIP_PPP_CHAP_SUPPORT
@@ -162,8 +149,6 @@ void ppposConnect(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &on_ip_event, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(NETIF_PPP_STATUS, ESP_EVENT_ANY_ID, &on_ppp_changed, NULL));
-    // if (onlyOncePPPOS)
-    // {
 
     /* create dte object */
     esp_modem_dte_config_t config = ESP_MODEM_DTE_DEFAULT_CONFIG();
@@ -191,8 +176,6 @@ void ppposConnect(void)
 
     modem_netif_adapter = esp_modem_netif_setup(dte);
     esp_modem_netif_set_default_handlers(modem_netif_adapter, esp_netif);
-    // onlyOncePPPOS = false;
-    // }
 
     /* create dce object */
 #if CONFIG_MODEM_DEVICE_SIM800
@@ -215,48 +198,29 @@ void ppposConnect(void)
     ESP_ERROR_CHECK(dce->set_flow_ctrl(dce, MODEM_FLOW_CONTROL_NONE));
     ESP_ERROR_CHECK(dce->store_profile(dce));
     /* Print Module ID, Operator, IMEI, IMSI */
-    ESP_LOGI(TAG, "Module: %s", dce->name);
-    ESP_LOGI(TAG, "Operator: %s", dce->oper);
     if (strcmp(dce->oper, "") == 0)
     {
-        while (1)
-        {
 
-            gpio_set_level(RED, 1);
-            gpio_set_level(GREEN, 0);
-            gpio_set_level(BLUE, 0);
-            vTaskDelay(pdMS_TO_TICKS(5000));
-            int stop = 0;
-            while (1)
-            {
-                stop++;
-            }
-        }
+        ESP_LOGW(TAG, "Empty Operator - Error\n");
+        gpio_set_level(RED, 1);
+        gpio_set_level(GREEN, 0);
+        gpio_set_level(BLUE, 0);
     }
     else
     {
-        while (1)
-        {
 
-            gpio_set_level(RED, 0);
-            gpio_set_level(GREEN, 0);
-            gpio_set_level(BLUE, 1);
-            vTaskDelay(pdMS_TO_TICKS(5000));
-
-            ESP_LOGI(TAG, "Module: %s", dce->name);
-            ESP_LOGI(TAG, "Operator: %s", dce->oper);
-            ESP_LOGI(TAG, "IMEI: %s", dce->imei);
-            ESP_LOGI(TAG, "IMSI: %s", dce->imsi);
-            /* Get signal quality */
-            uint32_t rssi = 0, ber = 0;
-            ESP_ERROR_CHECK(dce->get_signal_quality(dce, &rssi, &ber));
-            ESP_LOGI(TAG, "rssi: %d, ber: %d", rssi, ber);
-            /* Get battery voltage */
-            uint32_t voltage = 0, bcs = 0, bcl = 0;
-            ESP_ERROR_CHECK(dce->get_battery_status(dce, &bcs, &bcl, &voltage));
-            ESP_LOGI(TAG, "Battery voltage: %d mV\n\n\n", voltage);
-            /* setup PPPoS network parameters */
-        }
+        ESP_LOGI(TAG, "Module: %s", dce->name);
+        ESP_LOGI(TAG, "Operator: %s", dce->oper);
+        ESP_LOGI(TAG, "IMEI: %s", dce->imei);
+        ESP_LOGI(TAG, "IMSI: %s", dce->imsi);
+        /* Get signal quality */
+        uint32_t rssi = 0, ber = 0;
+        ESP_ERROR_CHECK(dce->get_signal_quality(dce, &rssi, &ber));
+        ESP_LOGI(TAG, "rssi: %d, ber: %d", rssi, ber);
+        /* Get battery voltage */
+        uint32_t voltage = 0, bcs = 0, bcl = 0;
+        ESP_ERROR_CHECK(dce->get_battery_status(dce, &bcs, &bcl, &voltage));
+        ESP_LOGI(TAG, "Battery voltage: %d mV\n\n\n", voltage);
     }
 
 #if !defined(CONFIG_MODEM_PPP_AUTH_NONE) && (defined(CONFIG_LWIP_PPP_PAP_SUPPORT) || defined(CONFIG_LWIP_PPP_CHAP_SUPPORT))
@@ -267,125 +231,12 @@ void ppposConnect(void)
     if (esp_netif_attach(esp_netif, modem_netif_adapter) != ESP_OK)
     {
         ESP_LOGI(TAG, "RECONNCT PPPoS");
-        ppposReconnect();
+        // ppposReconnect();
     }
     /* Wait for IP address */
     // xEventGroupWaitBits(event_group, CONNECT_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 }
-void ppposReconnect(void)
-{
 
-    ESP_ERROR_CHECK(dce->power_down(dce));
-    ESP_LOGI(TAG, "Power down");
-    ESP_ERROR_CHECK(dce->deinit(dce));
-
-    // reset
-    sim800lConfig();
-    sim800lReset();
-    vTaskDelay(pdMS_TO_TICKS(20000));
-    // configuration
-#if CONFIG_LWIP_PPP_PAP_SUPPORT
-    esp_netif_auth_type_t auth_type = NETIF_PPP_AUTHTYPE_PAP;
-#elif CONFIG_LWIP_PPP_CHAP_SUPPORT
-    esp_netif_auth_type_t auth_type = NETIF_PPP_AUTHTYPE_CHAP;
-#elif !defined(CONFIG_MODEM_PPP_AUTH_NONE)
-// #error "Unsupported AUTH Negotiation"
-#endif
-
-    // ESP_ERROR_CHECK(esp_netif_init());
-#if !CONFIG_ACTIVE_GPRS
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-#endif
-    // ESP_ERROR_CHECK(esp_event_loop_create_default());
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &on_ip_event, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(NETIF_PPP_STATUS, ESP_EVENT_ANY_ID, &on_ppp_changed, NULL));
-
-    /* create dte object */
-    esp_modem_dte_config_t config = ESP_MODEM_DTE_DEFAULT_CONFIG();
-    /* setup UART specific configuration based on kconfig options */
-    config.tx_io_num = CONFIG_MODEM_UART_TX_PIN;
-    config.rx_io_num = CONFIG_MODEM_UART_RX_PIN;
-    config.rts_io_num = CONFIG_MODEM_UART_RTS_PIN;
-    config.cts_io_num = CONFIG_MODEM_UART_CTS_PIN;
-    config.rx_buffer_size = CONFIG_MODEM_UART_RX_BUFFER_SIZE;
-    config.tx_buffer_size = CONFIG_MODEM_UART_TX_BUFFER_SIZE;
-    config.pattern_queue_size = CONFIG_MODEM_UART_PATTERN_QUEUE_SIZE;
-    config.event_queue_size = CONFIG_MODEM_UART_EVENT_QUEUE_SIZE;
-    config.event_task_stack_size = CONFIG_MODEM_UART_EVENT_TASK_STACK_SIZE;
-    config.event_task_priority = CONFIG_MODEM_UART_EVENT_TASK_PRIORITY;
-    config.line_buffer_size = CONFIG_MODEM_UART_RX_BUFFER_SIZE / 2;
-
-    dte = esp_modem_dte_init(&config);
-    /* Register event handler */
-    ESP_ERROR_CHECK(esp_modem_set_event_handler(dte, modem_event_handler, ESP_EVENT_ANY_ID, NULL));
-
-    modem_netif_adapter = esp_modem_netif_setup(dte);
-    esp_modem_netif_set_default_handlers(modem_netif_adapter, esp_netif);
-
-    /* create dce object */
-#if CONFIG_MODEM_DEVICE_SIM800
-    dce = sim800_init(dte);
-#elif CONFIG_MODEM_DEVICE_BG96
-    dce = bg96_init(dte);
-#elif CONFIG_MODEM_DEVICE_SIM7600
-    dce = sim7600_init(dte);
-#else
-// #error "Unsupported DCE"
-#endif
-    if (dce == NULL)
-        return;
-    ESP_ERROR_CHECK(dce->set_flow_ctrl(dce, MODEM_FLOW_CONTROL_NONE));
-    ESP_ERROR_CHECK(dce->store_profile(dce));
-    /* Print Module ID, Operator, IMEI, IMSI */
-    ESP_LOGI(TAG, "Module: %s", dce->name);
-    ESP_LOGI(TAG, "Operator: %s", dce->oper);
-    ESP_LOGI(TAG, "IMEI: %s", dce->imei);
-    ESP_LOGI(TAG, "IMSI: %s", dce->imsi);
-    /* Get signal quality */
-    uint32_t rssi = 0, ber = 0;
-    ESP_ERROR_CHECK(dce->get_signal_quality(dce, &rssi, &ber));
-    ESP_LOGI(TAG, "rssi: %d, ber: %d", rssi, ber);
-    /* Get battery voltage */
-    uint32_t voltage = 0, bcs = 0, bcl = 0;
-    ESP_ERROR_CHECK(dce->get_battery_status(dce, &bcs, &bcl, &voltage));
-    ESP_LOGI(TAG, "Battery voltage: %d mV", voltage);
-    /* setup PPPoS network parameters */
-#if !defined(CONFIG_MODEM_PPP_AUTH_NONE) && (defined(CONFIG_LWIP_PPP_PAP_SUPPORT) || defined(CONFIG_LWIP_PPP_CHAP_SUPPORT))
-    ////esp_netif_ppp_set_auth(esp_netif, auth_type, CONFIG_MODEM_PPP_AUTH_USERNAME, CONFIG_MODEM_PPP_AUTH_PASSWORD);
-#endif
-    /* attach the modem to the network interface */
-    if (esp_netif_attach(esp_netif, modem_netif_adapter) != ESP_OK)
-    {
-        ESP_LOGI(TAG, "RECONNCT PPPoS");
-        ppposReconnect();
-    }
-    /* Wait for IP address */
-    // xEventGroupWaitBits(event_group, CONNECT_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
-}
-void ppposStop(void)
-{
-    ESP_LOGE(TAG, "Test");
-    // Exit PPP mode
-    if (dce != NULL)
-    {
-
-        ESP_ERROR_CHECK(esp_modem_stop_ppp(dte));
-
-        // xEventGroupWaitBits(event_group, STOP_BIT, pdTRUE, pdTRUE, portMAX_DELAY);
-        ESP_LOGE(TAG, "Test3333");
-        // Power down module
-        ESP_ERROR_CHECK(dce->power_down(dce));
-        ESP_LOGI(TAG, "Power down");
-        ESP_ERROR_CHECK(dce->deinit(dce));
-
-        // Unregister events, destroy the netif adapter and destroy its esp-netif instance
-        // esp_modem_netif_clear_default_handlers(modem_netif_adapter);
-        // esp_modem_netif_teardown(modem_netif_adapter);
-        // esp_netif_destroy(esp_netif);
-
-        // ESP_ERROR_CHECK(dte->deinit(dte));
-    }
-}
 void getGprsInfo(char *oper)
 {
     int8_t operIndex = 0;
@@ -414,16 +265,5 @@ void getSignalQuantity(uint32_t *rssi, uint32_t *ber)
     if (dce == NULL)
     {
         ESP_ERROR_CHECK(dce->get_signal_quality(dce, rssi, ber));
-    }
-}
-
-uint8_t gprsIsConnected(uint16_t timeout)
-{
-    EventBits_t uxBits = xEventGroupWaitBits(event_group, CONNECT_BIT, false, true, pdMS_TO_TICKS(timeout));
-    if ((uxBits & CONNECT_BIT) == 0)
-        return 0;
-    else
-    {
-        return 1;
     }
 }

@@ -2,7 +2,6 @@
 #include "esp_log.h"
 #include "driver/gpio.h"
 #include "pppos_client.h"
-
 #define RED (gpio_num_t)14
 #define GREEN (gpio_num_t)12
 #define BLUE (gpio_num_t)27
