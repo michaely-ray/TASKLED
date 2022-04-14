@@ -32,6 +32,7 @@ esp_err_t mqttEventHandler(esp_mqtt_event_handle_t event)
         gpio_set_level(RED, 0);
         gpio_set_level(GREEN, 0);
         gpio_set_level(BLUE, 1);
+        vTaskDelay(portMAX_DELAY);
         break;
 
     case MQTT_EVENT_DISCONNECTED:
@@ -40,6 +41,8 @@ esp_err_t mqttEventHandler(esp_mqtt_event_handle_t event)
         gpio_set_level(RED, 1);
         gpio_set_level(GREEN, 0);
         gpio_set_level(BLUE, 0);
+        vTaskDelay(portMAX_DELAY);
+
         break;
 
     case MQTT_EVENT_SUBSCRIBED:

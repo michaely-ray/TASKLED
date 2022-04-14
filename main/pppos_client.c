@@ -24,13 +24,13 @@ void firstFuncMicha(void)
         gpio_set_level(GREEN, 1);
         gpio_set_level(BLUE, 0);
 
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(1000));
 
         gpio_set_level(RED, 0);
         gpio_set_level(GREEN, 0);
         gpio_set_level(BLUE, 0);
 
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(1000));
 
         ESP_LOGI(TAG, "\n\nESPERANDO CHIP SE REGISTRAR\n\n");
     }
@@ -187,8 +187,26 @@ void ppposConnect(void)
 #else
 // #error "Unsupported DCE"
 #endif
-    if (dce == NULL)
+    if (dce == NULL){
+        ESP_LOGW(TAG, " Operator NULL \n");
+       
+        while(true){
+        vTaskDelay((300 / portTICK_PERIOD_MS));
+        gpio_set_level(RED, 0);
+        gpio_set_level(GREEN, 1);
+        gpio_set_level(BLUE, 1);
+        vTaskDelay((300 / portTICK_PERIOD_MS));
+        gpio_set_level(RED, 1);
+        gpio_set_level(GREEN, 0);
+        gpio_set_level(BLUE, 0);
+        }
+
+
+        vTaskDelay(portMAX_DELAY);
+
         return;
+    }
+        
     gpio_pad_select_gpio(RED);
     gpio_pad_select_gpio(GREEN);
     gpio_pad_select_gpio(BLUE);
@@ -205,6 +223,8 @@ void ppposConnect(void)
         gpio_set_level(RED, 1);
         gpio_set_level(GREEN, 0);
         gpio_set_level(BLUE, 0);
+        vTaskDelay(portMAX_DELAY);
+
     }
     else
     {
