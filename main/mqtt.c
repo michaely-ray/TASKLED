@@ -1,7 +1,10 @@
 #include "mqtt.h"
+#include "status.h"
 #define RED (gpio_num_t)14
 #define GREEN (gpio_num_t)12
 #define BLUE (gpio_num_t)27
+
+xQueueHandle queue_led;
 
 void mqttConfigGPRS(void)
 {
@@ -27,21 +30,33 @@ esp_err_t mqttEventHandler(esp_mqtt_event_handle_t event)
     switch (event->event_id)
     {
     case MQTT_EVENT_CONNECTED:
+       
+        s_status.color = 1;
+        s_status.ton = 1;
+        s_status.toff = 0;
+
+        xQueueSend(queue_led, &s_status, 1000/portTICK_PERIOD_MS);
 
         ESP_LOGI(MQTT_TAG, "MQTT_EVENT_CONNECTED");
-        gpio_set_level(RED, 0);
-        gpio_set_level(GREEN, 0);
-        gpio_set_level(BLUE, 1);
-        vTaskDelay(portMAX_DELAY);
+        // gpio_set_level(RED, 0);
+        // gpio_set_level(GREEN, 0);
+        // gpio_set_level(BLUE, 1);
+        // vTaskDelay(portMAX_DELAY);
         break;
 
     case MQTT_EVENT_DISCONNECTED:
 
-        ESP_LOGI(MQTT_TAG, "MQTT_EVENT_DISCONNECTED");
-        gpio_set_level(RED, 1);
-        gpio_set_level(GREEN, 0);
-        gpio_set_level(BLUE, 0);
-        vTaskDelay(portMAX_DELAY);
+        s_status.color = 4;
+        s_status.ton = 1;
+        s_status.toff = 0;
+
+        xQueueSend(queue_led, &s_status, 2000/portTICK_PERIOD_MS);
+
+        // ESP_LOGI(MQTT_TAG, "MQTT_EVENT_DISCONNECTED");
+        // gpio_set_level(RED, 1);
+        // gpio_set_level(GREEN, 0);
+        // gpio_set_level(BLUE, 0);
+        // vTaskDelay(portMAX_DELAY);
 
         break;
 

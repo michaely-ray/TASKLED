@@ -1,6 +1,7 @@
 
 #include "driver/gpio.h"
 #include "pppos_client.h"
+#include "status.h"
 
 static const char *TAG = "GPRS";
 modem_dte_t *dte = NULL;
@@ -50,7 +51,7 @@ void sim800lConfig(void)
 void sim800lReset(void)
 {
     gpio_set_level(GPIO_NUM_21, 0);
-    vTaskDelay(150 / portTICK_PERIOD_MS);
+    vTaskDelay(1500 / portTICK_PERIOD_MS);
     gpio_set_level(GPIO_NUM_21, 1);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
@@ -61,6 +62,7 @@ void ppposStart(void)
     sim800lReset();
     firstFuncMicha();
     ppposConnect();
+    
 }
 
 static void modem_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
@@ -133,6 +135,7 @@ static void on_ip_event(void *arg, esp_event_base_t event_base,
 
 void ppposConnect(void)
 {
+    
 
 #if CONFIG_LWIP_PPP_PAP_SUPPORT
     esp_netif_auth_type_t auth_type = NETIF_PPP_AUTHTYPE_PAP;
@@ -191,19 +194,21 @@ void ppposConnect(void)
         ESP_LOGW(TAG, " Operator NULL \n");
        
         while(true){
-        vTaskDelay((300 / portTICK_PERIOD_MS));
-        gpio_set_level(RED, 0);
-        gpio_set_level(GREEN, 1);
-        gpio_set_level(BLUE, 1);
-        vTaskDelay((300 / portTICK_PERIOD_MS));
-        gpio_set_level(RED, 1);
-        gpio_set_level(GREEN, 0);
-        gpio_set_level(BLUE, 0);
+        s_status.color = 2;
+        s_status.ton = 1;
+        s_status.toff = 0;
+
+        xQueueSend(queue_led, &s_status, 2000/portTICK_PERIOD_MS);
+
+        // vTaskDelay((300 / portTICK_PERIOD_MS));
+        // gpio_set_level(RED, 0);
+        // gpio_set_level(GREEN, 1);
+        // gpio_set_level(BLUE, 1);
+        // vTaskDelay((300 / portTICK_PERIOD_MS));
+        // gpio_set_level(RED, 1);
+        // gpio_set_level(GREEN, 0);
+        // gpio_set_level(BLUE, 0);
         }
-
-
-        vTaskDelay(portMAX_DELAY);
-
         return;
     }
         
@@ -218,12 +223,15 @@ void ppposConnect(void)
     /* Print Module ID, Operator, IMEI, IMSI */
     if (strcmp(dce->oper, "") == 0)
     {
-
+        s_status.color = 3;
+        s_status.ton = 1;
+        s_status.toff = 0;
         ESP_LOGW(TAG, "Empty Operator - Error\n");
-        gpio_set_level(RED, 1);
-        gpio_set_level(GREEN, 0);
-        gpio_set_level(BLUE, 0);
-        vTaskDelay(portMAX_DELAY);
+        xQueueSend(queue_led, &s_status, 2000/portTICK_PERIOD_MS);
+        // gpio_set_level(RED, 1);
+        // gpio_set_level(GREEN, 0);
+        // gpio_set_level(BLUE, 0);
+        // vTaskDelay(portMAX_DELAY);
 
     }
     else

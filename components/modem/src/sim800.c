@@ -427,6 +427,7 @@ err:
         gpio_set_level(GREEN, 0);
         gpio_set_level(BLUE, 0);
         vTaskDelay(pdMS_TO_TICKS(5000));
+        
         int stop = 0;
         while(1){
             stop++;
