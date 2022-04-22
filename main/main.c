@@ -15,8 +15,8 @@ void app_main()
     gpio_set_level(GREEN, 1);
     gpio_set_level(RED, 0);
     gpio_set_level(BLUE, 0);
-    
+
+    initLed();    
     ppposStart();
-    initLed();
 
 }

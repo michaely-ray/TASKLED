@@ -3,8 +3,7 @@
 #define RED (gpio_num_t)14
 #define GREEN (gpio_num_t)12
 #define BLUE (gpio_num_t)27
-
-xQueueHandle queue_led;
+datasend_t status;
 
 void mqttConfigGPRS(void)
 {
@@ -17,6 +16,7 @@ void mqttConfigGPRS(void)
         .event_handle = mqttEventHandler,
     };
     mqttGPRS = esp_mqtt_client_init(&mqtt_cfg);
+    
     esp_mqtt_client_start(mqttGPRS);
 }
 
@@ -31,33 +31,23 @@ esp_err_t mqttEventHandler(esp_mqtt_event_handle_t event)
     {
     case MQTT_EVENT_CONNECTED:
        
-        s_status.color = 1;
-        s_status.ton = 1;
-        s_status.toff = 0;
+        status.color = 3;
+        status.ton = 10;
+        status.toff = 10;
 
-        xQueueSend(queue_led, &s_status, 1000/portTICK_PERIOD_MS);
+        xQueueSend(queue_led, &status, 0);
 
         ESP_LOGI(MQTT_TAG, "MQTT_EVENT_CONNECTED");
-        // gpio_set_level(RED, 0);
-        // gpio_set_level(GREEN, 0);
-        // gpio_set_level(BLUE, 1);
-        // vTaskDelay(portMAX_DELAY);
+
         break;
 
     case MQTT_EVENT_DISCONNECTED:
 
-        s_status.color = 4;
-        s_status.ton = 1;
-        s_status.toff = 0;
+        status.color = 1;
+        status.ton = 10;
+        status.toff = 10;
 
-        xQueueSend(queue_led, &s_status, 2000/portTICK_PERIOD_MS);
-
-        // ESP_LOGI(MQTT_TAG, "MQTT_EVENT_DISCONNECTED");
-        // gpio_set_level(RED, 1);
-        // gpio_set_level(GREEN, 0);
-        // gpio_set_level(BLUE, 0);
-        // vTaskDelay(portMAX_DELAY);
-
+        xQueueSend(queue_led, &status, 0);
         break;
 
     case MQTT_EVENT_SUBSCRIBED:
@@ -78,6 +68,11 @@ esp_err_t mqttEventHandler(esp_mqtt_event_handle_t event)
 
     case MQTT_EVENT_ERROR:
         ESP_LOGI(MQTT_TAG, "MQTT_EVENT_ERROR");
+        status.color = 2;
+        status.ton = 10;
+        status.toff = 10;
+        ESP_LOGW(MQTT_TAG, "Empty Operator - Error\n");
+        xQueueSend(queue_led, &status, 0);
         break;
 
     default:
@@ -85,4 +80,11 @@ esp_err_t mqttEventHandler(esp_mqtt_event_handle_t event)
         break;
     }
     return ESP_OK;
+}
+void mqttStop(void)
+{
+    if (mqttGPRS != NULL)
+    {
+        esp_mqtt_client_stop(mqttGPRS);
+    }
 }

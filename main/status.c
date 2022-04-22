@@ -2,6 +2,8 @@
 #include "esp_log.h"
 
 #define STATUS_TAG "STATUS"
+#define TICKS 100/portTICK_PERIOD_MS
+
 void ledIndicator(void *params)
 {
     datasend_t rx_status;
@@ -9,50 +11,58 @@ void ledIndicator(void *params)
     while(1)
     {
         xQueueReceive(queue_led, &rx_status , 100/portTICK_PERIOD_MS);
-        
         ESP_LOGI(STATUS_TAG, "QUEUE RECEIVED");
+
         switch (rx_status.color)
         {
-        case 1:
+        case D_BLUE:
             ESP_LOGI(STATUS_TAG, "QUEUE RECEIVED CONNECT");
             gpio_set_level(RED, 0);
             gpio_set_level(GREEN, 0);
             gpio_set_level(BLUE, 1);
-            vTaskDelay(portMAX_DELAY);
-            // xQueueReset(queue_led);
+            vTaskDelay(TICKS* rx_status.ton);
+            gpio_set_level(RED, 0);
+            gpio_set_level(GREEN, 0);
+            gpio_set_level(BLUE, 1);
+            vTaskDelay(TICKS* (rx_status.toff-1));
         break;
 
-        case 2:
-        case 3:
+        case D_GREEN:
+            ESP_LOGI(STATUS_TAG, "MQTT DESCONNECT");
+                gpio_set_level(RED, 0);
+                gpio_set_level(GREEN, 1);
+                gpio_set_level(BLUE, 0);
+                vTaskDelay(TICKS*rx_status.ton);
+                gpio_set_level(RED, 0);
+                gpio_set_level(GREEN, 0);
+                gpio_set_level(BLUE, 0);
+                vTaskDelay(TICKS*(rx_status.toff-1));
+
+        break;
+
+            case D_RED:
             ESP_LOGI(STATUS_TAG, "QUEUE RECEIVED ERROR");
                 gpio_set_level(RED, 1);
                 gpio_set_level(GREEN, 0);
                 gpio_set_level(BLUE, 0);
-                vTaskDelay((1000 / portTICK_PERIOD_MS));
+                vTaskDelay(TICKS*rx_status.ton);
                 gpio_set_level(RED, 0);
                 gpio_set_level(GREEN, 0);
                 gpio_set_level(BLUE, 0);
-            // xQueueReset(queue_led);
-        break;
-
-        case 4:
-            ESP_LOGI(STATUS_TAG, "QUEUE RECEIVED ERROR");
-                gpio_set_level(RED, 1);
-                gpio_set_level(GREEN, 0);
-                gpio_set_level(BLUE, 0);
-                vTaskDelay((1000 / portTICK_PERIOD_MS));
-                gpio_set_level(RED, 0);
-                gpio_set_level(GREEN, 0);
-                gpio_set_level(BLUE, 0);
-            // xQueueReset(queue_led);
+                vTaskDelay(TICKS*(rx_status.toff-1));
         break;
 
         default:
             ESP_LOGI(STATUS_TAG, "WAITING CONNECTION");
-            gpio_set_level(RED, 0);
-            gpio_set_level(GREEN, 1);
-            gpio_set_level(BLUE, 0);
             vTaskDelay(1000 / portTICK_PERIOD_MS);
+                gpio_set_level(RED, 0);
+                gpio_set_level(GREEN, 1);
+                gpio_set_level(BLUE, 0);
+                vTaskDelay(TICKS*5);
+                gpio_set_level(RED, 0);
+                gpio_set_level(GREEN, 0);
+                gpio_set_level(BLUE, 0);
+                vTaskDelay(TICKS*4);
         break;
 
         }

@@ -2,6 +2,8 @@
 #include "driver/gpio.h"
 #include "pppos_client.h"
 #include "status.h"
+#include "mqtt.h"
+
 
 static const char *TAG = "GPRS";
 modem_dte_t *dte = NULL;
@@ -12,7 +14,8 @@ esp_netif_t *esp_netif = NULL;
 #define GREEN (gpio_num_t)12
 #define BLUE (gpio_num_t)27
 
-void ppposReconnect(void);
+datasend_t status;
+// void ppposReconnect(void);
 
 void firstFuncMicha(void)
 {
@@ -21,17 +24,16 @@ void firstFuncMicha(void)
     for (int i = 0; i <= 30; i++)
     {
 
-        gpio_set_level(RED, 0);
-        gpio_set_level(GREEN, 1);
-        gpio_set_level(BLUE, 0);
+        // gpio_set_level(RED, 0);
+        // gpio_set_level(GREEN, 1);
+        // gpio_set_level(BLUE, 0);
 
-        vTaskDelay(pdMS_TO_TICKS(1000));
 
-        gpio_set_level(RED, 0);
-        gpio_set_level(GREEN, 0);
-        gpio_set_level(BLUE, 0);
+        // gpio_set_level(RED, 0);
+        // gpio_set_level(GREEN, 0);
+        // gpio_set_level(BLUE, 0);
 
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(2000));
 
         ESP_LOGI(TAG, "\n\nESPERANDO CHIP SE REGISTRAR\n\n");
     }
@@ -135,8 +137,6 @@ static void on_ip_event(void *arg, esp_event_base_t event_base,
 
 void ppposConnect(void)
 {
-    
-
 #if CONFIG_LWIP_PPP_PAP_SUPPORT
     esp_netif_auth_type_t auth_type = NETIF_PPP_AUTHTYPE_PAP;
 #elif CONFIG_LWIP_PPP_CHAP_SUPPORT
@@ -179,7 +179,7 @@ void ppposConnect(void)
 
     modem_netif_adapter = esp_modem_netif_setup(dte);
     esp_modem_netif_set_default_handlers(modem_netif_adapter, esp_netif);
-
+    
     /* create dce object */
 #if CONFIG_MODEM_DEVICE_SIM800
     dce = sim800_init(dte);
@@ -192,24 +192,11 @@ void ppposConnect(void)
 #endif
     if (dce == NULL){
         ESP_LOGW(TAG, " Operator NULL \n");
-       
-        while(true){
-        s_status.color = 2;
-        s_status.ton = 1;
-        s_status.toff = 0;
+        status.color = 2;
+        status.ton = 5;
+        status.toff = 5;
+        xQueueSend(queue_led, &status, 0);
 
-        xQueueSend(queue_led, &s_status, 2000/portTICK_PERIOD_MS);
-
-        // vTaskDelay((300 / portTICK_PERIOD_MS));
-        // gpio_set_level(RED, 0);
-        // gpio_set_level(GREEN, 1);
-        // gpio_set_level(BLUE, 1);
-        // vTaskDelay((300 / portTICK_PERIOD_MS));
-        // gpio_set_level(RED, 1);
-        // gpio_set_level(GREEN, 0);
-        // gpio_set_level(BLUE, 0);
-        }
-        return;
     }
         
     gpio_pad_select_gpio(RED);
@@ -223,17 +210,14 @@ void ppposConnect(void)
     /* Print Module ID, Operator, IMEI, IMSI */
     if (strcmp(dce->oper, "") == 0)
     {
-        s_status.color = 3;
-        s_status.ton = 1;
-        s_status.toff = 0;
+        status.color = 2;
+        status.ton = 2;
+        status.toff = 2;
         ESP_LOGW(TAG, "Empty Operator - Error\n");
-        xQueueSend(queue_led, &s_status, 2000/portTICK_PERIOD_MS);
-        // gpio_set_level(RED, 1);
-        // gpio_set_level(GREEN, 0);
-        // gpio_set_level(BLUE, 0);
-        // vTaskDelay(portMAX_DELAY);
+        xQueueSend(queue_led, &status, 0);
 
     }
+    
     else
     {
 
@@ -250,6 +234,7 @@ void ppposConnect(void)
         ESP_ERROR_CHECK(dce->get_battery_status(dce, &bcs, &bcl, &voltage));
         ESP_LOGI(TAG, "Battery voltage: %d mV\n\n\n", voltage);
     }
+    // xQueueSend(queue_led, &s_status, 500/portTICK_PERIOD_MS);
 
 #if !defined(CONFIG_MODEM_PPP_AUTH_NONE) && (defined(CONFIG_LWIP_PPP_PAP_SUPPORT) || defined(CONFIG_LWIP_PPP_CHAP_SUPPORT))
     ////esp_netif_ppp_set_auth(esp_netif, auth_type, CONFIG_MODEM_PPP_AUTH_USERNAME, CONFIG_MODEM_PPP_AUTH_PASSWORD);
@@ -259,10 +244,7 @@ void ppposConnect(void)
     if (esp_netif_attach(esp_netif, modem_netif_adapter) != ESP_OK)
     {
         ESP_LOGI(TAG, "RECONNCT PPPoS");
-        // ppposReconnect();
     }
-    /* Wait for IP address */
-    // xEventGroupWaitBits(event_group, CONNECT_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 }
 
 void getGprsInfo(char *oper)
@@ -292,6 +274,13 @@ void getSignalQuantity(uint32_t *rssi, uint32_t *ber)
 {
     if (dce == NULL)
     {
+        ESP_LOGW(TAG, " Operator NULL \n");
+        status.color = 2;
+        status.ton = 5;
+        status.toff = 5;
+
+        xQueueSend(queue_led, &status, 0);
+
         ESP_ERROR_CHECK(dce->get_signal_quality(dce, rssi, ber));
     }
 }

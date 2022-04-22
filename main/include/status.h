@@ -12,12 +12,18 @@
 #define GREEN (gpio_num_t)12
 #define BLUE (gpio_num_t)27
 
+#define D_GREEN 1
+#define D_RED 2
+#define D_BLUE 3
+
+// #define STATUS_WAIT {.color=1, ton =10, toff=10 }
+
 QueueHandle_t queue_led;
     
 typedef struct{
     uint8_t color;
     uint8_t ton;
-    int toff;
+    uint8_t toff;
 }datasend_t;
 
 datasend_t s_status;

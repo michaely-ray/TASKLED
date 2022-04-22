@@ -19,6 +19,7 @@ extern "C"
     void mqttConfigGPRS(void);
     void mqttStart(void);
     esp_err_t mqttEventHandler(esp_mqtt_event_handle_t event);
+    void mqttStop(void);
 
 #ifdef __cplusplus
 }
